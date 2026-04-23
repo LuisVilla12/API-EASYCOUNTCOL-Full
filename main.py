@@ -210,30 +210,24 @@ def update_sample(sample_id: int):
         conn.close()
         
 #Ruta para editar  una muestra
-@app.put("/sample/update/{sample_id}")
+@app.put("/sample/update/{sampleID}")
 async def update_sample(
+    sampleID: int,
     sampleName: str = Form(...),
-    idUser: int = Form(...),
     typeSample: str = Form(...),
     volumenSample: str = Form(...),
     factorSample: str = Form(...),
     medioSample: str = Form(...),
-    timeProcessingSample: str = Form(...),
-    countSample:str=Form(...),
-    dateSample: str = Form(...),
-    timeSample: str = Form(...),
-
+    
 ):
     return RegistarMuestra.update_sample(
+        sampleID=sampleID,
         sampleName=sampleName,
-        idUser=idUser,
         typeSample=typeSample,
         volumenSample=volumenSample,
         factorSample=factorSample,
         medioSample=medioSample,
     )
-
-
 
 @app.get("/ping")
 async def ping():
