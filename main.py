@@ -232,3 +232,20 @@ async def update_sample(
 @app.get("/ping")
 async def ping():
     return JSONResponse(content={"status": "ok"})
+
+@app.get("/follows/{idUser}")
+def getFollowsUser(idUser: int):
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+
+        sql = "SELECT * FROM follows WHERE idUser = %s AND state = 1"
+        cursor.execute(sql, (idUser,))
+        result = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        return {"follows": result}
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Eror: {e}") 
