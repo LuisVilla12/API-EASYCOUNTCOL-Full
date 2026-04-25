@@ -6,10 +6,13 @@ from fastapi.responses import JSONResponse
 from models.User import usuario, registrar_usuario
 from models.Login import LoginUsuario, login_usuario 
 from models.Sample import RegistarMuestra 
+from models.Follow import Follow
+from models.FollowCreate import FollowCreate
 from fastapi.responses import FileResponse
 import shutil
 import os
 from db import get_db
+
 
 #Crea una instancia de la aplicación FastAPI.
 app = FastAPI()
@@ -233,6 +236,19 @@ async def update_sample(
 async def ping():
     return JSONResponse(content={"status": "ok"})
 
+# SEGUIMIENTOS
+@app.post("/registrar-follow")
+def registrarFollow(data: FollowCreate):
+    try:
+        return FollowCreate.save(
+            followName=data.followName,
+            followDescription=data.followDescription,
+            idUser=data.idUser,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/follows/{idUser}")
 def getFollowsUser(idUser: int):
     try:
@@ -249,3 +265,69 @@ def getFollowsUser(idUser: int):
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Eror: {e}") 
+
+@app.get("/follows")
+def getFollows():
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+
+        sql = "SELECT * FROM follows WHERE state = 1"
+        cursor.execute(sql)
+        result = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        return {"follows": result}
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Eror: {e}") 
+
+
+# Ruta para cambiar el estado de una muestra
+@app.put("/follows/update/{followID}")
+async def update_follow(
+    followID: int,
+    followName: str = Form(...),
+    followDescription: str = Form(...),
+):
+    return Follow.update(
+        followID=followID,
+        followName=followName,
+        followDescription=followDescription
+    )
+
+# Ruta para cambiar el estado de un seguimiento
+@app.put("/follow/state/{follow_id}")
+def update_follow(follow_id: int):
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        sql = "UPDATE follows SET state = 0 WHERE id = %s"
+        cursor.execute(sql, (follow_id,))
+        conn.commit()
+        
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Seguimiento no encontrado")
+
+        return {"message": "Estado del seguimiento actualizado a 0"}
+    finally:
+        cursor.close()
+        conn.close()
+
+
+#Ruta para mostar la informacion del follow
+@app.get("/follows/info/{id_follow}")
+def getFollow(id_follow: int):
+    conn = get_db()
+    cursor = conn.cursor()
+    sql = "SELECT * FROM follows WHERE id = %s"
+    cursor.execute(sql, (id_follow,))
+    result = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Seguimiento no encontrado")
+    
+    return {"follow": result[0]}
