@@ -427,6 +427,34 @@ def get_original_image(id_muestra: int):
         print(f"ERROR AL CARGAR IMAGEN ORIGINAL: {e}")  # <-- log
         raise HTTPException(status_code=400, detail=f"Error al cargar imagen original: {e}")
 
+#Ruta para mostar la imagen original
+@app.get("/record/imagen-inferencia/{id_muestra}")
+def get_inference_image(id_muestra: int):
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+
+        sql = "SELECT sampleRoute FROM records WHERE id = %s"
+        cursor.execute(sql, (id_muestra,))
+        result = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+
+        if not result:
+            raise HTTPException(status_code=404, detail="Muestra no encontrada")
+
+        filename = result[0]
+        inference_path = f"ia/resultados/clustering_img/{filename}"  # Asegúrate de que el archivo está en esta ruta
+
+        if not os.path.exists(inference_path):
+            raise HTTPException(status_code=404, detail="Imagen de inferencia no encontrada")
+
+        return FileResponse(inference_path, media_type="image/png")
+
+    except Exception as e:
+        print(f"ERROR AL CARGAR IMAGEN DE INFERENCIA: {e}")  # <-- log
+        raise HTTPException(status_code=400, detail=f"Error al cargar imagen de inferencia: {e}")
 
 # Actualizar estado de un record
 @app.put("/records/state/{record_id}")
