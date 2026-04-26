@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from models.User import usuario, registrar_usuario
 from models.Login import LoginUsuario, login_usuario 
 from models.Sample import RegistarMuestra 
+from models.RecordCreate import RecordCreate
 from models.Follow import Follow
 from models.FollowCreate import FollowCreate
 from fastapi.responses import FileResponse
@@ -236,7 +237,7 @@ async def update_sample(
 async def ping():
     return JSONResponse(content={"status": "ok"})
 
-# SEGUIMIENTOS
+# Registrar un seguimiento
 @app.post("/registrar-follow")
 def registrarFollow(data: FollowCreate):
     try:
@@ -249,6 +250,7 @@ def registrarFollow(data: FollowCreate):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# Ver todos los seguimientos de un usuario
 @app.get("/follows/{idUser}")
 def getFollowsUser(idUser: int):
     try:
@@ -266,6 +268,7 @@ def getFollowsUser(idUser: int):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Eror: {e}") 
 
+# Ver todo el listado de seguimientos
 @app.get("/follows")
 def getFollows():
     try:
@@ -284,7 +287,7 @@ def getFollows():
         raise HTTPException(status_code=400, detail=f"Eror: {e}") 
 
 
-# Ruta para cambiar el estado de una muestra
+# Ruta para actualizar un seguimiento
 @app.put("/follows/update/{followID}")
 async def update_follow(
     followID: int,
@@ -331,3 +334,115 @@ def getFollow(id_follow: int):
         raise HTTPException(status_code=404, detail="Seguimiento no encontrado")
     
     return {"follow": result[0]}
+
+# Ver todos los records
+@app.get("/records")
+def getRecords():
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        sql = "SELECT * FROM records WHERE state = 1"
+        cursor.execute(sql)
+        result = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        return {"records": result}
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Eror: {e}") 
+
+# Ver todos los records de un seguimiento
+@app.get("/records/{followID}")
+def getRecords(followID: int):
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        sql = "SELECT * FROM records WHERE followID = %s AND state = 1"
+        cursor.execute(sql, (followID,))
+        result = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        return {"records": result}
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Eror: {e}") 
+
+# Registrar un record a un seguimiento
+@app.post("/registrar-record-file")
+async def registrar_record_file(
+    followID: int = Form(...),
+    dayNumber: str = Form(...),
+    sampleRoute: UploadFile = File(...)):
+    return RecordCreate.save_with_file(
+        followID=followID,
+        dayNumber=dayNumber,
+        sampleRoute=sampleRoute
+    )
+
+#Ruta para mostar la informacion de la muestra
+@app.get("/record-info/{id_muestra}")
+def getSample(id_muestra: int):
+    conn = get_db()
+    cursor = conn.cursor()
+    sql = "SELECT * FROM records WHERE id = %s"
+    cursor.execute(sql, (id_muestra,))
+    result = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Muestra no encontrada")
+    
+    return {"record": result[0]}
+
+
+#Ruta para mostar la imagen original
+@app.get("/record/imagen-original/{id_muestra}")
+def get_original_image(id_muestra: int):
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+
+        sql = "SELECT sampleRoute FROM records WHERE id = %s"
+        cursor.execute(sql, (id_muestra,))
+        result = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+
+        if not result:
+            raise HTTPException(status_code=404, detail="Muestra no encontrada")
+
+        filename = result[0]
+        original_path = f"ia/resultados/img/{filename}"  # Asegúrate de que el archivo está en esta ruta
+
+        if not os.path.exists(original_path):
+            raise HTTPException(status_code=404, detail="Imagen original no encontrada")
+
+        return FileResponse(original_path, media_type="image/png")
+
+    except Exception as e:
+        print(f"ERROR AL CARGAR IMAGEN ORIGINAL: {e}")  # <-- log
+        raise HTTPException(status_code=400, detail=f"Error al cargar imagen original: {e}")
+
+
+# Actualizar estado de un record
+@app.put("/records/state/{record_id}")
+def update_record(record_id: int):
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        sql = "UPDATE records SET state = 0 WHERE id = %s"
+        cursor.execute(sql, (record_id,))
+        conn.commit()
+        
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Record no encontrado")
+
+        return {"message": "Estado del record actualizado a 0"}
+    finally:
+        cursor.close()
+        conn.close()
+
