@@ -10,6 +10,9 @@ from sklearn.mixture import GaussianMixture
 from sklearn.metrics import silhouette_score
 import numpy as np
 from ultralytics import YOLO
+from collections import Counter
+import json
+
 
 #Nombre de la imagen y CSV a procesar
 BASE = ""
@@ -109,8 +112,13 @@ def vector_caracteristicas(img_name):
         results = model(img_rgb, verbose=False)
         
     boxes = results[0].boxes.xyxy.cpu().numpy()
-        # Ahora sí, results tiene las detecciones
+    
+    # Ahora sí, results tiene las detecciones
     print("🔍 Detectados:", len(boxes))
+    
+    if len(boxes) == 0:
+        print("⚠️ No se detectaron objetos en la imagen.")
+        return 0
 
     csv_rows = []
     for idx, box in enumerate(boxes):
@@ -181,9 +189,16 @@ def tratamiento_imagen(name_image):
 
     # Genera CSV
     count_col=vector_caracteristicas(name_image)
-
-    # Ejecuta clustering y retorna su resultado
-    return cloustering(name_image,count_col)
+    if count_col == 0:
+        print("⚠️ No se detectaron objetos, no se realizará clustering.")
+        return {
+            "image_resultado": None,
+            "labels": 0,
+            "optimal_clusters": 0,
+            "clustersDetail": json.dumps({})
+        }
+    else:
+        return cloustering(name_image,count_col)
 
 def cloustering(name_image,count_col):
     OUT_DIR = "ia/resultados/clustering_img"
@@ -208,7 +223,7 @@ def cloustering(name_image,count_col):
     X_scaled = scaler.fit_transform(X)
 
     # PCA a 20 dimensiones
-    n_components = min(20, X_scaled.shape[0], X_scaled.shape[1])
+    n_components = min(40, X_scaled.shape[0], X_scaled.shape[1])
     pca = PCA(n_components=n_components)
     X_pca = pca.fit_transform(X_scaled)
     
@@ -229,7 +244,32 @@ def cloustering(name_image,count_col):
         agg = AgglomerativeClustering(n_clusters=optimal_clusters, linkage='ward')
         labels_agg = agg.fit_predict(X_pca)
 
-    # Cargar imagen
+
+
+    # ANALISIS DE CLUSTERS
+    # Realiza el conteo de clouster 
+    conteo_clusters = {
+        int(k): int(v)
+        for k, v in Counter(labels_agg).items()
+    } 
+    # Ordenar por clave (cluster)
+    # conteo_clusters = dict(sorted(conteo_clusters.items()))
+    # Suma total de detecciones para calcular porcentaje
+    total = sum(conteo_clusters.values())
+    # Estructura final con conteo y porcentaje
+    clusters_info = {
+    int(k): {
+        "count": int(v),
+        "percentage": round((v / total) * 100, 2)
+    }
+    for k, v in conteo_clusters.items()
+    }
+    # print(f"Conteo por cluster: {clusters_info}")
+    clusters_json = json.dumps(clusters_info)
+    print(f"Conteo por cluster (JSON): {clusters_json}")
+    
+    
+    # GENERAR IMAGEN CON BOUNDING BOXES SEGÚN CLUSTER (AGGLOMERATIVE)
     img = cv2.imread(full_path)
     if img is None:
         raise FileNotFoundError(f"No se encontró la imagen: {full_path}")
@@ -239,9 +279,9 @@ def cloustering(name_image,count_col):
     # Paleta BGR para clusters (se reutiliza por si hay >2 clusters)
     PALETTE = [
         (0, 0, 255),    # Rojo
-        (0, 255, 0),    # Verde
         (255, 0, 0),    # Azul
         (0, 255, 255),  # Amarillo-cia
+        (0, 255, 0),    # Verde
     ]
 
     def make_color_map(labels):
@@ -271,5 +311,7 @@ def cloustering(name_image,count_col):
     
     return {
         "image_resultado": img_agg,
-        "labels": count_col
-}
+        "labels": int(count_col),
+        "optimal_clusters": int(optimal_clusters),
+        "clustersDetail": clusters_json
+    }

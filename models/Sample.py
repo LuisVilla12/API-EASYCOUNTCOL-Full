@@ -10,7 +10,6 @@ import os
 import uuid
 import time
 import cv2
-# from ia.algoritmo_water import tratamiento_imagen
 from ia.infer import tratamiento_imagen
 
 
@@ -30,7 +29,8 @@ class RegistarMuestra(BaseModel):
     creationDate: date
     creationTime: str
     medioSample: str
-
+    optimalClusters: int
+    
     @classmethod
     def save_with_file(cls, sampleName: str, idUser: int, typeSample: str,volumenSample: str,factorSample: str,sample_file: UploadFile, medioSample: str = "N/A"):
         try:
@@ -57,8 +57,12 @@ class RegistarMuestra(BaseModel):
             
             # Asignar variables del resultado
             image_resultado = resultado["image_resultado"]
-            labels = resultado["labels"]
+            labels = int(resultado["labels"])
+            optimal_clusters = int(resultado["optimal_clusters"])
+            clusters_detail = resultado["clustersDetail"]
             
+            print(clusters_detail)
+
             # Determinar la hora
             ahoraActual = datetime.now()
             creation_time = ahoraActual.strftime("%H:%M:%S")
@@ -76,6 +80,7 @@ class RegistarMuestra(BaseModel):
                 creationDate=date.today(),
                 creationTime=creation_time,
                 medioSample=medioSample,
+                optimalClusters=optimal_clusters
             )
 
             # 4. Guardar en la base de datos
@@ -85,9 +90,9 @@ class RegistarMuestra(BaseModel):
             sql = """
                 INSERT INTO samples (
                     sampleName, idUser, typeSample, volumenSample,
-                    factorSample, sampleRoute, creationDate,processingTime,count,creationTime, medioSample,state
+                    factorSample, sampleRoute, creationDate,processingTime,count,creationTime, medioSample,optimalClusters,state,clustersDetail
                 ) 
-                VALUES (%s, %s, %s, %s, %s, %s, %s,%s,%s,%s,%s,1)
+                VALUES (%s, %s, %s, %s, %s, %s, %s,%s,%s,%s,%s,%s,1,%s)
             """
             cursor.execute(sql, (
                 muestra.sampleName,
@@ -100,8 +105,10 @@ class RegistarMuestra(BaseModel):
                 muestra.processingTime,
                 muestra.count,
                 muestra.creationTime,
-                muestra.medioSample
-            ))
+                muestra.medioSample,
+                muestra.optimalClusters,
+                clusters_detail))
+            
             sample_id = cursor.lastrowid
 
             conn.commit()

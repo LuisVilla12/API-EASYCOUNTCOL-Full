@@ -27,6 +27,8 @@ class RecordCreate(BaseModel):
     creationDate: date
     creationTime: str
     processingTime: float
+    optimalClusters: int
+
 
     @classmethod
     def save_with_file(cls, followID: int, dayNumber: str, sampleRoute: UploadFile):
@@ -49,12 +51,19 @@ class RecordCreate(BaseModel):
             start_time = time.time()  
             # Extreaer los resultados del procesamiento de la imagen
             resultado = tratamiento_imagen(filename)
+            
+            if resultado["labels"] == 0:
+                raise HTTPException(status_code=400, detail="No se detectaron objetos en la imagen.")
+            
             end_time = time.time()   
             processing_time = end_time - start_time 
             
             # Asignar variables del resultado
             image_resultado = resultado["image_resultado"]
             labels = resultado["labels"]
+            optimal_clusters = int(resultado["optimal_clusters"])
+            clusters_detail = resultado["clustersDetail"]
+            print("Resultado del tratamiento de imagen:", optimal_clusters, clusters_detail)
             
             # Determinar la hora
             ahoraActual = datetime.now()
@@ -70,6 +79,7 @@ class RecordCreate(BaseModel):
                 processingTime=processing_time,
                 creationDate=date.today(),
                 creationTime=creation_time,
+                optimalClusters=optimal_clusters
             )
             creation_date_str = record.creationDate.strftime("%Y-%m-%d")
             # 4. Guardar en la base de datos
@@ -78,19 +88,10 @@ class RecordCreate(BaseModel):
 
             sql = """
                 INSERT INTO records (
-                    followID, sampleRoute, countCol, dayNumber, creationTime, creationDate, state, processingTime
+                    followID, sampleRoute, countCol, dayNumber, creationTime, creationDate, state, processingTime, optimalClusters,clustersDetail
                 )   
-                VALUES (%s, %s, %s, %s, %s, %s, 1, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, 1, %s, %s, %s)
             """
-            print("Valores a insertar:")
-            print("followID:", record.followID, type(record.followID))
-            print("sampleRoute:", record.sampleRoute, type(record.sampleRoute))
-            print("countCol:", record.countCol, type(record.countCol))
-            print("dayNumber:", record.dayNumber, type(record.dayNumber))
-            print("creationTime:", record.creationTime, type(record.creationTime))
-            print("creationDate:", creation_date_str, type(creation_date_str))
-            print("processingTime:", record.processingTime, type(record.processingTime))
-
             cursor.execute(sql, (
                 record.followID,
                 record.sampleRoute,
@@ -98,7 +99,9 @@ class RecordCreate(BaseModel):
                 record.dayNumber,
                 record.creationTime,
                 creation_date_str,
-                record.processingTime
+                record.processingTime,
+                record.optimalClusters,
+                clusters_detail
             ))  
                         
                         
@@ -119,29 +122,20 @@ class RecordCreate(BaseModel):
     
     @classmethod
     # METODO PARA ACTUALIZAR MUESTRA
-    def update_sample(cls, sampleID: int, sampleName: str, typeSample: str,
-                      volumenSample: str, factorSample: str, medioSample: str):
+    def update_record(cls, recordID: int, dayNumber: str):
         try:
             conn = get_db()
             cursor = conn.cursor()
 
             sql = """
-                UPDATE samples
+                UPDATE records
                 SET 
-                    sampleName = %s,
-                    typeSample = %s,
-                    volumenSample = %s,
-                    factorSample = %s,
-                    medioSample = %s
+                    dayNumber = %s
                 WHERE id = %s
             """
             cursor.execute(sql, (
-                sampleName,
-                typeSample,
-                volumenSample,
-                factorSample,
-                medioSample,
-                sampleID))
+                dayNumber,
+                recordID))
 
             conn.commit()
             cursor.close()
@@ -149,7 +143,7 @@ class RecordCreate(BaseModel):
 
             return {
                 "success": True,
-                "idSample": sampleID,
+                "idSample": recordID,
                 "message": "Muestra actualizada correctamente."
             }
 

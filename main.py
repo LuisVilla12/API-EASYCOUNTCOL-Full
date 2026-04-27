@@ -56,7 +56,8 @@ async def registrar_muestra_file(
     factorSample: str = Form(...),
     medioSample: str = Form(...),
     sample_file: UploadFile = File(...)):
-    return RegistarMuestra.save_with_file(
+    try:
+        return RegistarMuestra.save_with_file(
         sampleName=sampleName,
         idUser=idUser,
         typeSample=typeSample,
@@ -65,6 +66,9 @@ async def registrar_muestra_file(
         medioSample=medioSample,
         sample_file=sample_file
     )
+    except Exception as e:
+        print("ERROR:", str(e))
+        raise HTTPException(status_code=400, detail=str(e))
     
 
 #Ruta para mostar la imagen procesada
@@ -224,14 +228,18 @@ async def update_sample(
     medioSample: str = Form(...),
     
 ):
-    return RegistarMuestra.update_sample(
-        sampleID=sampleID,
-        sampleName=sampleName,
-        typeSample=typeSample,
-        volumenSample=volumenSample,
-        factorSample=factorSample,
-        medioSample=medioSample,
-    )
+    try:
+        return RegistarMuestra.update_sample(
+            sampleID=sampleID,
+            sampleName=sampleName,
+            typeSample=typeSample,
+            volumenSample=volumenSample,
+            factorSample=factorSample,
+            medioSample=medioSample,
+        )
+    except Exception as e:
+        print("ERROR:", str(e))
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/ping")
 async def ping():
@@ -371,15 +379,21 @@ def getRecords(followID: int):
 
 # Registrar un record a un seguimiento
 @app.post("/registrar-record-file")
+
 async def registrar_record_file(
     followID: int = Form(...),
     dayNumber: str = Form(...),
     sampleRoute: UploadFile = File(...)):
-    return RecordCreate.save_with_file(
+    try:
+        return RecordCreate.save_with_file(
         followID=followID,
         dayNumber=dayNumber,
         sampleRoute=sampleRoute
-    )
+        )
+    except Exception as e:
+        print("ERROR:", str(e))
+        raise HTTPException(status_code=400, detail=str(e))
+    
 
 #Ruta para mostar la informacion de la muestra
 @app.get("/record-info/{id_muestra}")
@@ -474,3 +488,16 @@ def update_record(record_id: int):
         cursor.close()
         conn.close()
 
+@app.put("/record/update/{recordID}")
+async def updateRecord(
+    recordID: int,
+    dayNumber: str = Form(...),
+):
+    try:
+        return RecordCreate.update_record(
+            recordID=recordID,
+            dayNumber=dayNumber,
+        )
+    except Exception as e:
+        print("ERROR:", str(e))
+        raise HTTPException(status_code=400, detail=str(e))
