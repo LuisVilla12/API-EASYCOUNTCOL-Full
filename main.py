@@ -501,3 +501,18 @@ async def updateRecord(
     except Exception as e:
         print("ERROR:", str(e))
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/record-show/{idRecord}")
+def show_record(idRecord: int):
+    conn = get_db()
+    cursor = conn.cursor()
+    sql = "SELECT id,countCol,dayNumber,creationDate FROM records WHERE id = %s"
+    cursor.execute(sql, (idRecord,))
+    result = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    if not result:
+        raise HTTPException(status_code=404, detail="Muestra no encontrada")
+    
+    return {"record": result}
