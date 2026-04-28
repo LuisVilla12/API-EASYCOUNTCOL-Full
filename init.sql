@@ -1,12 +1,3 @@
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8mb4 */;
-/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
-/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
-/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
-/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
-
 use easycountcol;
 DROP TABLE IF EXISTS `users`;
 CREATE TABLE `users` (
@@ -36,10 +27,13 @@ CREATE TABLE `samples` (
   `creationTime` time DEFAULT NULL,
   `medioSample` varchar(255) NOT NULL,
   `state` int(1) DEFAULT NULL,
+  `optimalClusters` int(2) DEFAULT NULL,
+  `clustersDetail` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`clustersDetail`)),
   UNIQUE KEY `id_sample` (`id`),
   KEY `fk_users` (`idUser`),
   CONSTRAINT `fk_users` FOREIGN KEY (`idUser`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=82 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=109 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 
 DROP TABLE IF EXISTS `follows`;
 CREATE TABLE `follows` (
@@ -53,32 +47,44 @@ CREATE TABLE `follows` (
   PRIMARY KEY (`id`),
   KEY `fk_follows_users` (`idUser`),
   CONSTRAINT `fk_follows_users` FOREIGN KEY (`idUser`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
-DROP TABLE IF EXISTS `follow_records`;
-CREATE TABLE `follow_records` (
+DROP TABLE IF EXISTS `records`;
+CREATE TABLE `records` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `followID` int(11) NOT NULL,
-  `imagePath` varchar(255) NOT NULL,
-  `colonyCount` int(11) NOT NULL,
+  `sampleRoute` varchar(255) NOT NULL,
+  `countCol` int(11) NOT NULL,
   `dayNumber` int(11) DEFAULT NULL,
   `creationTime` time DEFAULT current_timestamp(),
   `creationDate` date DEFAULT NULL,
   `state` int(1) DEFAULT NULL,
+  `processingTime` float DEFAULT NULL,
+  `clustersDetail` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`clustersDetail`)),
+  `optimalClusters` int(2) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `fk_follow` (`followID`),
   CONSTRAINT `fk_follow` FOREIGN KEY (`followID`) REFERENCES `follows` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 
+
+INSERT INTO `follows` (`id`, `name`, `idUser`, `description`, `creationDate`, `state`, `creationTime`) VALUES
+(13, 'Bacteria X', 19, 'Poliferacion de una colonia', '2026-04-27', 1, '14:07:18'),
+(14, 'Bacteria A', 19, 'aaa', '2026-04-27', 1, '16:43:38');
+INSERT INTO `records` (`id`, `followID`, `sampleRoute`, `countCol`, `dayNumber`, `creationTime`, `creationDate`, `state`, `processingTime`, `clustersDetail`, `optimalClusters`) VALUES
+(26, 13, 'd71d7d154d2e4de9bca034796f9073b4_34.png', 15, 1, '14:14:06', '2026-04-27', 1, 0.71969, '{\"1\": {\"count\": 56, \"percentage\": 42.11}, \"0\": {\"count\": 77, \"percentage\": 57.89}}', 0),
+(27, 13, '77ee07d7ad834c7e822829d9cb9ee1a9_35.jpg', 20, 2, '14:16:30', '2026-04-27', 1, 0.978223, '{\"1\": {\"count\": 56, \"percentage\": 42.11}, \"0\": {\"count\": 77, \"percentage\": 57.89}}', 2),
+(28, 13, 'd63c9ea935b3469db868b73cf8a2c23f_34.png', 35, 3, '14:19:21', '2026-04-27', 1, 1.81469, '{\"1\": {\"count\": 56, \"percentage\": 42.11}, \"0\": {\"count\": 77, \"percentage\": 57.89}}', 0),
+(29, 13, 'dd6660c5c639443bb001cb3e6a667fbb_33.jpg', 50, 4, '14:27:55', '2026-04-27', 1, 0.491845, '{\"0\": {\"count\": 2, \"percentage\": 100.0}}', 1),
+(30, 13, '1cb27f6da1e54ecf8d5f69bf21e4ee52_35.jpg', 90, 5, '14:42:15', '2026-04-27', 1, 0.82318, '{\"1\": {\"count\": 56, \"percentage\": 42.11}, \"0\": {\"count\": 77, \"percentage\": 57.89}}', 2),
+(31, 13, 'feb1a4c52af5497e9064820dd470b9d1_35.jpg', 133, 8, '16:37:34', '2026-04-27', 1, 1.10309, '{\"1\": {\"count\": 56, \"percentage\": 42.11}, \"0\": {\"count\": 77, \"percentage\": 57.89}}', 2),
+(32, 13, '6cb2cb0dd84f44dda61ae9dd469e245d_33.jpg', 2, 9, '16:39:33', '2026-04-27', 1, 0.573732, '{\"0\": {\"count\": 2, \"percentage\": 100.0}}', 1),
+(33, 14, '53f5a098b0214a7f884b95ee95eb2d8c_33.jpg', 2, 1, '16:43:56', '2026-04-27', 1, 0.562251, '{\"0\": {\"count\": 2, \"percentage\": 100.0}}', 1),
+(34, 14, '197b65ee411145fda6cba1fbd5b4b437_35.jpg', 133, 100, '16:44:12', '2026-04-27', 0, 1.11683, '{\"1\": {\"count\": 56, \"percentage\": 42.11}, \"0\": {\"count\": 77, \"percentage\": 57.89}}', 2),
+(35, 14, '625312320f4245cb8abba97c740f3f4e_33.jpg', 2, 11, '17:35:11', '2026-04-27', 1, 1.35845, '{\"0\": {\"count\": 2, \"percentage\": 100.0}}', 1);
+INSERT INTO `samples` (`id`, `sampleName`, `idUser`, `typeSample`, `volumenSample`, `factorSample`, `sampleRoute`, `creationDate`, `processingTime`, `count`, `creationTime`, `medioSample`, `state`, `optimalClusters`, `clustersDetail`) VALUES
+(108, 'Muestra 10', 19, 'Alimentos', '1', '1', '2c29f52cd0044e41926a271f81cec06e_35.jpg', '2026-04-27', 0.816931, 133, '13:59:41', 'Agar MacConkey', 1, 2, '{\"1\": {\"count\": 56, \"percentage\": 42.11}, \"0\": {\"count\": 77, \"percentage\": 57.89}}');
 INSERT INTO `users` (`id`, `name`, `lastname`, `email`, `password`, `username`, `type`) VALUES
 (19, 'Luis Alberto', 'Jimenez Villa', 'luisjivl@gmail.com', '$2b$12$rE7PF4JHJVBBFN86FZiQeONQbT9AIYUfaui/4KIn3l54wAc/sWLc6', 'LuisVilla', 1);
 
-
-/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
-/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
-/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
-/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
