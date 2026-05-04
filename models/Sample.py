@@ -34,6 +34,7 @@ class RegistarMuestra(BaseModel):
     @classmethod
     def save_with_file(cls, sampleName: str, idUser: int, typeSample: str,volumenSample: str,factorSample: str,sample_file: UploadFile, medioSample: str = "N/A"):
         try:
+            start_proccess_time = time.time()  
             #Verificar existencia de las carpetas donde esta almacenada las imagenes
             os.makedirs("ia/resultados/img", exist_ok=True)
             os.makedirs("ia/resultados/clustering", exist_ok=True)
@@ -49,11 +50,11 @@ class RegistarMuestra(BaseModel):
                 # Guarda el archivo subidoa la carpeta uploads
                 shutil.copyfileobj(sample_file.file, buffer)
                 
-            start_time = time.time()  
+            start_inferencia_time = time.time()  
             # Extreaer los resultados del procesamiento de la imagen
             resultado = tratamiento_imagen(filename)
-            end_time = time.time()   
-            processing_time = end_time - start_time 
+            end_inferencia_time = time.time()   
+            processing_time = end_inferencia_time - start_inferencia_time 
             
             # Asignar variables del resultado
             image_resultado = resultado["image_resultado"]
@@ -114,13 +115,17 @@ class RegistarMuestra(BaseModel):
             conn.commit()
             cursor.close()
             conn.close()
-
+            end_proccess_time = time.time()  
+            processing_time_total = end_proccess_time - start_proccess_time 
+            
+            print(processing_time_total)
             # Regresar el id de la muestra y mensaje
             return {
                 "success": True,
                 "idSample": sample_id,
                 "message": "Muestra registrada correctamente."
             }
+           
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Error al registrar muestra: {e}")
     
